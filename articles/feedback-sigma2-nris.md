@@ -57,6 +57,14 @@ Having `apptainer` as the container runtime on both clusters was essential. Cont
 
 **Suggestion:** If node health is degrading, drain nodes proactively rather than letting jobs start on failing hardware.
 
+### 5. Login and Lustre availability issues (MEDIUM priority)
+
+**Problem:** During our usage period (January-February 2026), Saga experienced several login node and Lustre filesystem outages, typically occurring during night hours and weekend days. SSH connections would fail or hang, and running jobs that depended on Lustre would stall or crash.
+
+**Impact:** Weekend and overnight batch jobs were particularly affected -- jobs submitted Friday evening might fail due to a Lustre outage Saturday morning, with no way to detect or recover until Monday. This made unattended long-running jobs unreliable.
+
+**Suggestion:** Improve monitoring and notification for infrastructure outages (email/status page). Consider adding health checks that drain the job queue gracefully before planned maintenance windows.
+
 ---
 
 ## Betzy Issues
