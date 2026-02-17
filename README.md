@@ -1,6 +1,6 @@
 # HPC Usage Guide for Geospatial ML Pipelines
 
-Practical guide for running large-scale geospatial pipelines on European HPC systems, covering the **romcrop** project (TESSERA embedding generation, crop classification), the **Sure2** project (satellite-based crop emergence insurance), the **EMB** project (CDL crop segmentation from foundation model embeddings), and the **Fields** project (US crop field history tile pipeline).
+Practical guide for running large-scale geospatial pipelines on European HPC systems, covering the **romcrop** project (TESSERA embedding generation, crop classification), the **Sure2** project (satellite-based crop emergence insurance), the **EMB** project (CDL crop segmentation from foundation model embeddings), and other small projects (US crop field history tile pipeline, ALFA land cover inference).
 
 This guide covers real workflows, real errors, and real fixes. It is not a generic HPC tutorial.
 
@@ -61,7 +61,7 @@ GDAL:      CLI tools available (unlike LUMI)
 
 9. **[emb-training.md](emb-training.md)** -- GPU training guide for EMB. Mixed precision (bfloat16, no GradScaler), BatchNorm pitfalls, EMA buffer copying, DDP unwrapping, learning rates per architecture, cosine schedule, channel normalization.
 
-### Fields Project (US Crop Field History)
+### Other Small Projects
 
 10. **[fields-pipeline.md](fields-pipeline.md)** -- Full-US crop field tile pipeline on Betzy. Covers 29.1M-field zonal stats, tippecanoe vector tile generation (with critical "shards not a power of 2" bug fix), PMTiles conversion, S3 deployment. Includes 6 bugs with root causes and fixes, Lustre vs /dev/shm performance, and 4-node parallel processing pattern.
 
