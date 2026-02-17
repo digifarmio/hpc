@@ -1,7 +1,7 @@
 # Feedback for NRIS / Sigma2 Administrators (Saga & Betzy)
 
 *From: digifarm (account nn12037k)*
-*Covering: Geospatial ML pipelines, crop insurance batch processing, and continental-scale vector tile generation (2025-2026)*
+*Covering: Geospatial ML pipelines and crop insurance batch processing (2025-2026)*
 
 ---
 
@@ -105,7 +105,7 @@ Having `apptainer` as the container runtime on both clusters was essential. Cont
 
 **Problem:** Betzy nodes have 128 physical cores but 256 logical CPUs (hyperthreading). Python's `os.cpu_count()` and C's `sysconf(_SC_NPROCESSORS_ONLN)` both return 256. This breaks tools like tippecanoe that use CPU count for internal sizing.
 
-**Impact:** Tippecanoe crashed with "shards not a power of 2" after processing 29.1 million features (~30 minutes of wasted work per attempt). The fix required reading tippecanoe source code to understand the interaction.
+**Impact:** Tippecanoe crashed with "shards not a power of 2" after processing millions of features (~30 minutes of wasted work per attempt). The fix required reading tippecanoe source code to understand the interaction.
 
 **Suggestion:** Document this in the Betzy user guide, recommending that users cap thread counts at 128 for CPU-intensive tools. Consider adding a note about `TIPPECANOE_MAX_THREADS` and similar environment variables for known affected tools.
 

@@ -19,7 +19,6 @@ This is an **operational knowledge base** (not a software project) documenting r
 | `emb-lumi.md` | EMB project on LUMI (MI250X, ROCm container, DDP on 8 GCDs) |
 | `emb-errors.md` | **Critical reference** — 16 errors with root causes, diagnosis times, and fixes |
 | `emb-training.md` | GPU training specifics (mixed precision, BatchNorm, EMA, learning rates) |
-| `fields-pipeline.md` | US crop field tile pipeline (29.1M polygons, tippecanoe, PMTiles) |
 | `tips.md` | Cross-cluster patterns, SSH config, common mistakes ranked by pain |
 
 ## Projects Documented
@@ -27,7 +26,6 @@ This is an **operational knowledge base** (not a software project) documenting r
 - **romcrop/vcloud**: TESSERA embedding generation (LUMI GPU) + CatBoost crop classification
 - **Sure2**: Satellite-based crop emergence insurance (Saga/Betzy, Apptainer containers)
 - **EMB**: CDL crop segmentation from foundation model embeddings (Betzy A100 + LUMI MI250X)
-- **Other small projects**: US crop field history tile pipeline, ALFA land cover inference
 
 ## HPC Systems
 
