@@ -32,15 +32,15 @@ Step-by-step recipes for common tasks on each cluster:
 - **[How-To: LUMI](guides/howto-lumi.md)** -- Container setup, GPU bindings, single-GPU and 8-GCD DDP jobs, bfloat16 mixed precision, interactive sessions, common errors
 - **[How-To: Saga](guides/howto-saga.md)** -- Venv/container setup, CPU and GPU jobs, PROJ_DATA fix, pre-loading pattern, resumable batch processing
 - **[How-To: Betzy](guides/howto-betzy.md)** -- Storage layout, A100 GPU training, 4-node `normal` partition pattern, `/dev/shm` for temp files, batch jobs with resumability
-- **[How-To: Poznan (Eagle)](guides/howto-poznan.md)** -- H100 GPUs, Singularity on compute nodes, DR inference, key-based SSH auth
+- **[How-To: Poznan (Eagle)](guides/howto-poznan.md)** -- H100 GPUs, Singularity on compute nodes, DR inference, DR+FD pipeline, key-based SSH auth
 
 ### Pipeline-Specific Guides
 
-- **[How-To: DR Inference](guides/howto-dr-inference.md)** -- Running Deep Resolution (10× Sentinel-2 super-resolution) across all clusters. Container setup, SLURM templates, full-tile vs AOI workflows, QC checks, and hard-won production failure lessons
+- **[How-To: DR Inference](guides/howto-dr-inference.md)** -- Running Deep Resolution (10× Sentinel-2 super-resolution) across all clusters. Container setup, SLURM templates, full-tile vs AOI workflows, automated multi-date DR+FD pipeline, QC checks, and 10 hard-won production failure lessons
 
 ### Tips & Pitfalls
 
-- **[Tips & Pitfalls](tips.md)** -- SSH config, rsync gotchas, SLURM patterns, container vs venv, cluster selection guide, and 14 common mistakes ranked by pain
+- **[Tips & Pitfalls](tips.md)** -- SSH config, rsync gotchas, SLURM patterns, container vs venv, cluster selection guide, and 22 common mistakes ranked by pain
 
 ### Articles
 

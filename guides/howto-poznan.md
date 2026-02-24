@@ -225,6 +225,72 @@ Based on real DR v4/v5 runs on Poznan H100:
 
 ---
 
+## Run a Combined DR + FD Pipeline
+
+Poznan can run the full pipeline: 3 DR dates → FD GPU inference → FD CPU post-processing.
+
+```bash
+WORKDIR=/mnt/storage_3/home/girish_digifarm/pl0386-01/archive
+
+python3 ${WORKDIR}/deep/dr_slurm_submit2.py \
+  --tile 33LWF --country AO \
+  --dates "2023-06-26,2023-07-31,2023-09-14" \
+  --fd_version 2023062611 --fd_model 10158001 \
+  --server_name poznan \
+  --aws_access_key_id AKIA... \
+  --aws_secret_access_key "..." \
+  --pg_url "postgres://..." \
+  --dr_docker_image ${WORKDIR}/dr/dr4saga1.sif \
+  --mem 128G --mem_cpu 64G \
+  --gpu_partition proxima \
+  --workdir ${WORKDIR}/dr \
+  --workdir_inf ${WORKDIR} \
+  --mail_type BEGIN,FAIL --mail_user morris@digifarm.io
+```
+
+For DR only (no FD):
+
+```bash
+python3 ${WORKDIR}/deep/dr_slurm_submit2.py \
+  --tile 33LWF --country AO \
+  --dates "2023-06-26,2023-07-31,2023-09-14" \
+  --dr_only \
+  --server_name poznan \
+  --aws_access_key_id AKIA... \
+  --aws_secret_access_key "..." \
+  --pg_url "postgres://..." \
+  --dr_docker_image ${WORKDIR}/dr/dr4saga1.sif \
+  --mem 128G --mem_cpu 64G \
+  --gpu_partition proxima \
+  --workdir ${WORKDIR}/dr \
+  --workdir_inf ${WORKDIR} \
+  --mail_type BEGIN,FAIL --mail_user morris@digifarm.io
+```
+
+### Pipeline Job Dependencies
+
+```
+DR_1 (date1) ─┐
+DR_2 (date2) ──┼── afterok ──→ FD_GPU ── afterok ──→ FD_CPU ──┐
+DR_3 (date3) ─┘                                                ├── afterany ──→ Finish
+DR_1, DR_2, DR_3 ──────────────────────────────────────────────┘
+```
+
+- **afterok** between DR→FD: FD only starts if all DRs succeeded
+- **afterany** for Finish: always runs to log results and clean up
+
+### Poznan-Specific Pipeline Gotchas
+
+1. **No `--account` directive.** Unlike Saga/Betzy (`nn12037k`), Poznan jobs must not include `#SBATCH --account`. The submit script handles this automatically.
+
+2. **FD path conversion.** DR outputs host paths (`/mnt/storage_3/.../tmp/...`). FD runs inside a container where workdir is bind-mounted differently. The submit script converts paths via `sed` before passing to FD.
+
+3. **DR cleanup preserves `_v8.tif`.** After DR inference, cleanup removes temp files (stacked bands, memmaps) but preserves both the bigtiff COG and the original `_v8.tif` output needed by FD.
+
+4. **Partition choice matters.** Use `proxima` for guaranteed H100 access. `tesla` is a mixed partition (Tesla + H100) that may assign older GPUs.
+
+---
+
 ## Common Errors and Fixes
 
 | Error | Fix |
@@ -235,3 +301,7 @@ Based on real DR v4/v5 runs on Poznan H100:
 | OOM at ~99 GB | For very large tiles, the pipeline auto-splits when RAM < 700 GB. On H100 nodes (755 GB RAM) it processes whole — reduce `--mem` to trigger splitting if needed |
 | `Missing or insufficient output stats for s2_lr_6` (repeated) | Fixed in latest code — early fallback to input_norm at startup instead of per-batch warning |
 | Job pending for hours on `proxima` | Try `tesla` partition as fallback (also has H100 nodes) |
+| `UnboundLocalError: local variable 'math'` | A local `import math` inside `run_inference_pipeline()` shadowed the module-level import. Fixed by removing the redundant local import |
+| FD fails with "file not found" after DR success | DR cleanup was deleting the `_v8.tif` file. Fixed with `keep_files` parameter in cleanup |
+| FD starts after DR failure | Change dependency from `afterany` to `afterok` for FD jobs |
+| `--dr_only False` still runs DR-only | argparse `type=bool` bug — use `action='store_true'` instead |

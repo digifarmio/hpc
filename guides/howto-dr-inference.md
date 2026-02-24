@@ -179,6 +179,39 @@ INFERENCE_JOB=$(sbatch --parsable run_sr_33LWF_230626.sh)
 sbatch --dependency=afterany:$INFERENCE_JOB run_sr_post_33LWF.sh
 ```
 
+### Automated Multi-Date Pipeline (DR + FD)
+
+`dr_slurm_submit2.py` automates submission of multi-date DR jobs with optional FD chaining:
+
+```bash
+# DR + FD (3 dates → 3 DR jobs → FD GPU → FD CPU → Finish)
+python3 deep/dr_slurm_submit2.py \
+  --tile 33LWF --country AO \
+  --dates "2023-06-26,2023-07-31,2023-09-14" \
+  --fd_version 2023062611 --fd_model 10158001 \
+  --server_name poznan \
+  --aws_access_key_id AKIA... --aws_secret_access_key ... \
+  --pg_url "postgres://..." \
+  --dr_docker_image dr/dr4saga1.sif \
+  --mem 128G --mem_cpu 64G \
+  --gpu_partition proxima \
+  --workdir dr --workdir_inf . \
+  --mail_type BEGIN,FAIL --mail_user morris@digifarm.io
+
+# DR only (skip FD inference)
+python3 deep/dr_slurm_submit2.py \
+  --tile 33LWF --country AO \
+  --dates "2023-06-26,2023-07-31,2023-09-14" \
+  --dr_only \
+  --server_name poznan \
+  ... # same flags as above, minus fd_version/fd_model
+```
+
+The script handles:
+- Idempotent re-runs (skips DR if `_v8.tif` output already exists)
+- SLURM dependencies: DR jobs run in parallel, FD GPU waits for all DRs (`afterok`), FD CPU waits for FD GPU, Finish task runs after all (`afterany`)
+- Cluster-specific config: account directives, partitions, runtimes, path conversion
+
 ---
 
 ## Environment Variables
@@ -305,6 +338,44 @@ Every DR run ends with 7 automated quality checks:
 **What happened:** A 100% nodata file passed through QC (which logged a warning) and was uploaded to S3 as a valid product.
 
 **Fix:** QC FAIL now raises a RuntimeError, blocking S3 upload and DB updates. In the PDR pipeline, QC was also moved to run *before* S3 upload (it previously ran after).
+
+### 6. Python `import` Inside Function Shadows Module-Level Import
+
+**What happened:** `import math` at line 3000 inside `run_inference_pipeline()` in `infer_s2f.py` made Python treat `math` as a local variable throughout the entire function. When `math.ceil()` was called at line 2796 (before the local import), it failed with `UnboundLocalError: local variable 'math' referenced before assignment`. All 3 DR jobs crashed after ~10 minutes.
+
+**Fix:** Removed the redundant local `import math` — the module-level `import math` at line 78 was already available.
+
+**Lesson:** In Python, any assignment (including `import`) to a name anywhere in a function makes that name local to the entire function, not just after the assignment. This is a compile-time decision, not runtime. Never shadow module-level imports with local imports in the same function.
+
+### 7. FD Jobs Started Before DR Completed (afterany vs afterok)
+
+**What happened:** FD GPU job was submitted with `--dependency=afterany:<DR_JOB_IDS>`. This means FD starts as soon as DR finishes, *regardless of whether DR succeeded or failed*. When DR failed, FD tried to read nonexistent DR output files and failed too, wasting GPU hours.
+
+**Fix:** Changed FD GPU dependency from `afterany` to `afterok`. Now FD only starts if all DR jobs completed successfully. The `afterany` dependency is still used for the finish/cleanup task (which should always run to log results).
+
+**Lesson:** Use `afterok` for downstream processing that requires successful output. Use `afterany` only for cleanup/notification tasks.
+
+### 8. FD Container Path Conversion on Poznan
+
+**What happened:** DR outputs host paths like `/mnt/storage_3/.../tmp/sr_33LWF_20230626/S2x10_T33LWF_20230626_v8.tif`. FD runs inside a Singularity container where the workdir is bind-mounted to `/mnt/<relative_path>`. FD couldn't find the DR files because it received host paths, not container paths.
+
+**Fix:** Added `sed`-based path conversion in the FD submission script: `files=$(echo $files | sed 's|{workdir}/|/mnt/{relpath}/|g')`. Also added a pre-check that verifies all DR files exist (on the host) before FD starts, with clear error messages listing missing files.
+
+### 9. DR Cleanup Deleted Output File Needed by FD
+
+**What happened:** After DR inference, `cleanup_temp_storage()` deleted all files in the temp directory except the bigtiff COG. The original `_v8.tif` output file (needed by FD as input) was deleted. FD then failed because its input files no longer existed.
+
+**Fix:** Added a `keep_files` parameter to `cleanup_temp_storage()` that accepts a list of additional files to preserve alongside the bigtiff. DR now passes `keep_files=[dr_output_file]` to preserve the `_v8.tif`.
+
+**Lesson:** When pipeline stages share intermediate files, ensure cleanup in stage N doesn't delete files needed by stage N+1. Make preservation explicit.
+
+### 10. argparse `type=bool` Doesn't Work
+
+**What happened:** `parser.add_argument('--dr_only', type=bool, default=False)` silently accepts any string and converts it to `True` — including `--dr_only False`. Python's `bool("False")` returns `True` because it's a non-empty string. DR-only mode was always active when the flag was passed with any value.
+
+**Fix:** Changed to `action='store_true'`, which correctly handles `--dr_only` as a boolean flag.
+
+**Lesson:** Never use `type=bool` in argparse. Use `action='store_true'` for flags, or `type=lambda x: x.lower() == 'true'` if you need explicit True/False values.
 
 ---
 
