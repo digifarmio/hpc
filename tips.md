@@ -26,6 +26,11 @@ Host lumi
     ControlMaster auto
     ControlPath ~/.ssh/sockets/%r@%h-%p
     ControlPersist 7d
+
+Host poznan
+    HostName eagle.man.poznan.pl
+    User myuser
+    IdentityFile ~/.ssh/mykey
 ```
 
 Create socket directory: `mkdir -p ~/.ssh/sockets`
@@ -149,6 +154,9 @@ print(f'Epoch {c[\"epoch\"]}, Loss {c.get(\"best_val_loss\",\"?\")}, Metric {c.g
 | Situation | Use | Why |
 |-----------|-----|-----|
 | Full model (>16GB VRAM) | **LUMI** | Only cluster with enough VRAM (64GB MI250X) |
+| DR full-tile inference | **Poznan** | H100 80GB + 755GB RAM = no sub-tiling needed |
+| DR AOI inference | Betzy or Saga | A100 is sufficient for small crops |
+| Field delineation (FD) | Betzy or Saga | GPU phase on `accel`/`a100`, CPU phase on `normal`/`bigmem` |
 | Quick small-model iteration | Saga | Shorter queues (when GPU nodes are up) |
 | Data download & preparation | Saga | Good network, GDAL CLI available |
 | I/O-bound batch processing | Betzy `preproc` | Less contention, good scheduling |
@@ -184,3 +192,11 @@ print(f'Epoch {c[\"epoch\"]}, Loss {c.get(\"best_val_loss\",\"?\")}, Metric {c.g
 13. **Used Lustre for temp-file-heavy tools** -- tippecanoe, SQLite WAL mode, and similar tools deadlock on Lustre. Use `/dev/shm` (126GB on Betzy) instead.
 
 14. **PROJ_DATA mismatch in containers** -- system proj.db is outdated; rasterio/pyproj produce silently wrong coordinates. Always set `PROJ_DATA` to the container's rasterio proj_data path.
+
+15. **Hardcoded timeouts for size-dependent operations** -- a PostProc writer that handles 400 blocks (AOI) in 5 minutes was given a 25,000s timeout. When processing 46,000+ blocks (full tile), it was killed at 95% completion after 7 hours, leaving a corrupt all-zeros output. Always scale timeouts with input size.
+
+16. **Not validating output before declaring success** -- inference "completed" 153,664 patches successfully, but PostProc was killed mid-write. The pipeline reported `succeeded=True` and uploaded a blank file to S3. Always run quality checks before upload, and always treat force-terminated processes as failures.
+
+17. **PyTorch INT_MAX tensor element limit** -- `TILE_BATCH_SIZE=64` produced tensors with 2.21 billion elements, exceeding PyTorch's `aten::index` limit of 2^31 (~2.15 billion). The error message is cryptic (CUDA error, not a clear overflow). Calculate `batch × channels × height × width × upscale²` before choosing batch size.
+
+18. **Singularity not available on Poznan login nodes** -- unlike Saga/Betzy where you can test containers interactively on login, Poznan requires SLURM (`srun` or `sbatch`) to access Singularity. Use `srun --partition=proxima --gpus=1 --pty bash` for interactive testing.
