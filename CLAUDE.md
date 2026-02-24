@@ -17,6 +17,8 @@ guides/
   howto-lumi.md                    # Step-by-step recipes for LUMI
   howto-saga.md                    # Step-by-step recipes for Saga
   howto-betzy.md                   # Step-by-step recipes for Betzy
+  howto-poznan.md                  # Step-by-step recipes for Poznan (Eagle)
+  howto-dr-inference.md            # Cross-cluster DR inference guide
 articles/
   lumi-article.md                  # In-depth article on LUMI experience
   saga-article.md                  # In-depth article on Saga experience
@@ -30,8 +32,9 @@ articles/
 | System | GPUs | Container Runtime | Key Constraint |
 |--------|------|-------------------|----------------|
 | LUMI (Finland, CSC) | AMD MI250X (ROCm) | `singularity` | No `--rocm` flag (causes GLIBC mismatch) |
-| Saga (Norway, NRIS) | NVIDIA P100 (CUDA) | `apptainer` | No internet from compute nodes |
-| Betzy (Norway, NRIS) | NVIDIA A100 (CUDA) | `apptainer` | 4-node minimum on `normal` partition |
+| Saga (Norway, NRIS) | NVIDIA A100 (CUDA) | `singularity` | No internet from compute nodes |
+| Betzy (Norway, NRIS) | NVIDIA A100 (CUDA) | `singularity` | 4-node minimum on `normal` partition |
+| Poznan Eagle (Poland, PSNC) | NVIDIA H100 (CUDA) | `singularity` | Singularity only on compute nodes, not login |
 
 ## Key Patterns When Editing These Docs
 
